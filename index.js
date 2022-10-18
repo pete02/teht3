@@ -1,6 +1,7 @@
 const http = require('http')
 const express = require('express')
 const app = express()
+const cors = require('cors')
 const morgan=require('morgan')
 let persons=[
       {
@@ -25,6 +26,8 @@ let persons=[
       }
 ]
 
+
+app.use(cors())
 const generateId = () => {
     const maxId = persons.length > 0
       ? Math.max(...persons.map(n => n.id))
@@ -63,6 +66,7 @@ app.get('/info',(req,res)=>{
 })
 
 app.post('/api/persons', (request, response) => {
+  console.log("got request")
 const body = request.body
 
 if (!body.name|| !body.number ) {
@@ -89,8 +93,9 @@ const person = {
 })
 
 
-
+app.use(express.static('build'))
 const PORT = 3001
-app.listen(PORT, () => {
-console.log(`Server running on port ${PORT}`)
+const HOST = '0.0.0.0'
+app.listen(PORT,HOST, () => {
+  console.log(`Express web server started: http://${HOST}:${PORT}`);
 })
