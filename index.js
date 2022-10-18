@@ -70,6 +70,7 @@ if (!body.name|| !body.number ) {
     error: 'content missing' 
     })
 }
+
 if(persons.filter(person=>person.name===body.name).length>0){
     return response.status(400).json({ 
         error: 'name must be unique' 
