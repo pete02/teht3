@@ -23,22 +23,22 @@ const noteSchema = new mongoose.Schema({
 const Note = mongoose.model('Note', noteSchema)
 
 if(process.argv<5){
-console.log(process.argv.length)
-    const note = new Note({
+  console.log(process.argv.length)
+  const note = new Note({
     content: [name,number],
     date: new Date(),
     important: true,
-    })
+  })
 
-    note.save().then(result => {
+  note.save().then(() => {
     console.log(`added ${name} number ${number} to phonebook`)
     mongoose.connection.close()
-    })
+  })
 
 }else{
-    Note.find({}).then(persons=>{
-        console.log("phonebook")
-        persons.map(person=>console.log(`${person.content[0]} ${person.content[1]}`))
-        mongoose.connection.close()
-    })
+  Note.find({}).then(persons => {
+    console.log('phonebook')
+    persons.map(person => console.log(`${person.content[0]} ${person.content[1]}`))
+    mongoose.connection.close()
+  })
 }
