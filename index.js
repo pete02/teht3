@@ -3,6 +3,12 @@ const express = require('express')
 const app = express()
 const cors = require('cors')
 const morgan=require('morgan')
+require('dotenv').config()
+
+const Note = require('./models/persons')
+
+
+
 let persons=[
       {
         "name": "Arto Hellas",
@@ -25,7 +31,7 @@ let persons=[
         "id": 4
       }
 ]
-
+app.use(express.json())
 
 app.use(cors())
 const generateId = () => {
@@ -38,63 +44,101 @@ morgan.token('body', req => {
 return JSON.stringify(req.body)
 })
 
-app.use(express.json())
+
 app.use(morgan(':method :url :status - :response-time ms :body'))
-app.get('/api/persons', (req, res) => {
-    res.json(persons)
-  })
 
-  app.get('/api/persons/:id', (request, response) => {
-    const id = Number(request.params.id)
-    const person = persons.find(person => person.id === id)
-    
-    if (person) {
-      response.json(person)
-    } else {
-      response.status(404).end()
-    }
-  }) 
 
-  app.delete('/api/persons/:id', (request, response) => {
-    const id = Number(request.params.id)
-    persons = persons.filter(person => person.id !== id)
-  
-    response.status(204).end()
-  })
-app.get('/info',(req,res)=>{
-    res.send(`<div>PhoneBook has info for ${persons.length}</div><div>${new Date()}</div>`)
-})
 
-app.post('/api/persons', (request, response) => {
-  console.log("got request")
-const body = request.body
 
-if (!body.name|| !body.number ) {
-    return response.status(400).json({ 
-    error: 'content missing' 
-    })
-}
 
-if(persons.filter(person=>person.name===body.name).length>0){
-    return response.status(400).json({ 
-        error: 'name must be unique' 
-        })
-}
+const errorHandler = (error, request, response, next) => {
+  console.error(error.message)
 
-const person = {
-    name: body.name,
-    number: body.number,
-    id: generateId(),
+  if (error.name === 'CastError') {
+    return response.status(400).send({ error: 'malformatted id' })
+  } else if (error.name === 'ValidationError') {
+    return response.status(400).json({ error: error.message })
   }
 
-  persons = persons.concat(person)
+  next(error)
+}
 
-  response.json(person)
+
+
+
+app.get('/api/persons', (req, res) => {
+  Note.find({}).then(persons=>{
+    res.json(persons)
+  })
+  })
+
+app.put('/api/persons/:id',(request,response,next)=>{
+  console.log(`id:${request.params.id}`)
+  console.log(request.body)
+  Note.findOneAndUpdate({id:request.params.id},request.body).then(response.status(204).end())
+  .catch(error=>next(error))
+  
+})
+app.use(express.static('build'))
+
+
+app.get('/api/persons/:id', (request, response,next) => {
+  Note.findById(request.params.id)
+    .then(note => {
+      if (note) {
+        response.json(note)
+      } else {
+        response.status(404).end()
+      }
+    })
+    .catch(error => next(error))
+
+}) 
+
+app.delete('/api/persons/:id', (request, response,next) => {
+  Note.findByIdAndRemove(request.params.id)
+  .then(result => {
+    response.status(204).end()
+  })
+  .catch(error => next(error))
 })
 
 
-app.use(express.static('build'))
-const PORT = 3001
+app.get('/info',(req,res)=>{
+  Note.find({}).then(persons=>{
+    res.send(`<div>PhoneBook has info for ${persons.length}</div><div>${new Date()}</div>`)
+  })
+})
+
+app.post('/api/persons', (request, response,next) => {
+  console.log("got request")
+  const body = request.body
+
+  const note =new Note({
+      name: body.name,
+      number: body.number,
+    })
+
+    note.save().then(savedNote => {
+      response.json(savedNote)
+    }).catch(error=>next(error))
+})
+  
+
+
+const unknownEndpoint = (request, response) => {
+  response.status(404).send({ error: 'unknown endpoint' })
+}
+
+// olemattomien osoitteiden käsittely
+app.use(unknownEndpoint)
+
+
+// tämä tulee kaikkien muiden middlewarejen rekisteröinnin jälkeen!
+app.use(errorHandler)
+
+
+const PORT = process.env.PORT
 const HOST = '0.0.0.0'
 app.listen(PORT,HOST, () => {
   console.log(`Express web server started: http://${HOST}:${PORT}`);
